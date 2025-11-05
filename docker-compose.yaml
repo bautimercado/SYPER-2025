@@ -1,0 +1,100 @@
+version: '3.8'
+
+services:
+  # Servidor SSH (víctima) - Debian Slim
+  servidor-ssh:
+    image: debian:bullseye-slim
+    container_name: servidor-ssh
+    hostname: servidor-ssh
+    networks:
+      red_interna:
+        ipv4_address: 10.0.0.20
+    command: >
+      bash -c "
+      apt-get update -qq &&
+      apt-get install -y -qq openssh-server iproute2 iputils-ping procps &&
+      mkdir -p /run/sshd &&
+      echo 'root:password123' | chpasswd &&
+      sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config &&
+      sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config &&
+      echo 'Banner /etc/ssh/banner' >> /etc/ssh/sshd_config &&
+      echo 'SyPeR Company SSH Server' > /etc/ssh/banner &&
+      /usr/sbin/sshd -D
+      "
+    restart: unless-stopped
+
+  # Suricata IPS (gateway)
+  suricata-ips:
+    image: jasonish/suricata:7.0
+    container_name: suricata-ips
+    hostname: suricata-ips
+    networks:
+      red_externa:
+        ipv4_address: 192.168.1.10
+      red_interna:
+        ipv4_address: 10.0.0.1
+    volumes:
+      - ./suricata/rules:/etc/suricata/rules:ro
+      - ./suricata/logs:/var/log/suricata
+      - ./suricata/suricata.yaml:/etc/suricata/suricata.yaml:ro
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+      - SYS_NICE
+    privileged: true
+    command: >
+      bash -c "
+      apt-get update -qq &&
+      apt-get install -y -qq iptables iproute2 procps &&
+      iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE &&
+      echo 1 > /proc/sys/net/ipv4/ip_forward &&
+      iptables -I FORWARD -j NFQUEUE --queue-num 0 &&
+      echo 'Suricata IPS iniciado' &&
+      suricata -c /etc/suricata/suricata.yaml -q 0 --pidfile /var/run/suricata.pid -v
+      "
+    restart: unless-stopped
+    depends_on:
+      - servidor-ssh
+
+  # Atacante - Kali Linux Rolling (versión slim)
+  atacante:
+    image: kalilinux/kali-rolling
+    container_name: atacante
+    hostname: atacante
+    networks:
+      red_externa:
+        ipv4_address: 192.168.1.100
+    command: >
+      bash -c "
+      apt-get update -qq &&
+      apt-get install -y -qq nmap hping3 iputils-ping iproute2 netcat-traditional curl &&
+      ip route add 10.0.0.0/24 via 192.168.1.10 &&
+      echo '=== Atacante listo ===' &&
+      echo 'Target: 10.0.0.20 (Servidor SSH)' &&
+      echo 'Gateway IPS: 192.168.1.10' &&
+      tail -f /dev/null
+      "
+    cap_add:
+      - NET_ADMIN
+    restart: unless-stopped
+    depends_on:
+      - suricata-ips
+    stdin_open: true
+    tty: true
+
+networks:
+  red_externa:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 192.168.1.0/24
+          gateway: 192.168.1.1
+  
+  red_interna:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.0.0.0/24
+          gateway: 10.0.0.1
