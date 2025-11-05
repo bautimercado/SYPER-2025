@@ -1,0 +1,1 @@
+alert tcp any any -> any any (msg:"PORTSCAN TCP"; flags:S; threshold:type both, track by_src, count 20, seconds 60; sid:1000001; rev:1;)
