@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+    ssh-server:
+        image: debian:bullseye-slim
+        container_name: ssh-server
+        hostname: ssh-server
+        networks:
+            innet:
+                ipv4_address: 10.0.0.30
+        command: >
+            bash -c "
+            apt-get update -qq &&
+            apt-get install -y -qq openssh-server iproute2 iputils-ping procps sudo &&
+            mkdir -p /var/run/sshd &&
+            echo 'root:password' | chpasswd &&
+            sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config &&
+            sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config &&
+            /usr/sbin/sshd -D"
+
+        ports:
+            - "2222:22"
+        volumes:
+            - ./ssh-keys:/root/.ssh
+        restart: unless-stopped
+
+networks:
+    innet:
+        driver: bridge
+        ipam:
+            config:
+                - subnet: 10.0.0.0/24
+
+
