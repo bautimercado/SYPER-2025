@@ -4,13 +4,18 @@
 echo "Configuracion server SSH"
 
 apt-get update -qq
-apt-get install -y -qq openssh-server iproute2 iputils-ping procps sudo fail2ban
+apt-get install -y -qq openssh-server iptables iproute2 rsyslog iputils-ping procps sudo fail2ban
 
 mkdir -p /var/run/sshd
 echo 'root:password' | chpasswd
 
 sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
 sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
+sed -i 's/UsePAM yes/UsePAM no/' /etc/ssh/sshd_config
+sed -i 's/#SyslogFacility AUTH/SyslogFacility AUTH/' /etc/ssh/sshd_config
+sed -i 's/#LogLevel INFO/LogLevel VERBOSE/' /etc/ssh/sshd_config
+echo "PrintLastLog yes" >> /etc/ssh/sshd_config
+
 
 echo "Configuracion fail2ban"
 
@@ -33,6 +38,7 @@ EOF
 
 mkdir -p /var/log
 touch /var/log/auth.log
+chmod 666 /var/log/auth.log
 
 echo "Iniciar fail2ban"
 
@@ -40,4 +46,4 @@ fail2ban-server -x &
 
 echo "iniciar server SSH"
 
-exec /usr/sbin/sshd -D 
+exec /usr/sbin/sshd -D -E /var/log/auth.log
