@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
     ssh-server:
-        image: debian:bullseye-slim
+        image: ubuntu:jammy
         container_name: ssh-server
         hostname: ssh-server
         networks:
