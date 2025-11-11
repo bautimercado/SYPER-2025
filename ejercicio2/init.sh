@@ -4,7 +4,7 @@
 echo "Configuracion server SSH"
 
 apt-get update -qq
-apt-get install -y -qq openssh-server iptables iproute2 rsyslog iputils-ping procps sudo fail2ban
+apt-get install -y -qq openssh-server iptables moreutils iproute2 rsyslog iputils-ping procps sudo fail2ban
 
 mkdir -p /var/run/sshd
 echo 'root:password' | chpasswd
@@ -46,4 +46,4 @@ fail2ban-server -x &
 
 echo "iniciar server SSH"
 
-exec /usr/sbin/sshd -D -E /var/log/auth.log
+exec /usr/sbin/sshd -D -E /dev/stderr 2>&1 | ts '[%Y-%m-%d %H:%M:%S]' >> /var/log/auth.log
