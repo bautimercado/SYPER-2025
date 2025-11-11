@@ -8,21 +8,29 @@ services:
         networks:
             innet:
                 ipv4_address: 10.0.0.30
-        command: >
-            bash -c "
-            apt-get update -qq &&
-            apt-get install -y -qq openssh-server iproute2 iputils-ping procps sudo &&
-            mkdir -p /var/run/sshd &&
-            echo 'root:password' | chpasswd &&
-            sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config &&
-            sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config &&
-            /usr/sbin/sshd -D"
-
+        build: .
         ports:
             - "2222:22"
         volumes:
-            - ./ssh-keys:/root/.ssh
-        restart: unless-stopped
+            - ./init.sh:/init.sh
+        command: /bin/bash /init.sh
+    
+    atacante:
+        image: debian:bullseye-slim
+        container_name: atacante
+        hostname: atacante
+        networks:
+            innet:
+                ipv4_address: 10.0.0.31
+        
+        command: > 
+            bash -c "
+            apt-get update -qq &&
+            apt-get install -y -qq openssh-client iputils-ping &&
+            sleep infinity"
+        tty: true
+
+
 
 networks:
     innet:
