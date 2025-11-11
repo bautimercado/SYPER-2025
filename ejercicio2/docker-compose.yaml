@@ -14,7 +14,12 @@ services:
         volumes:
             - ./init.sh:/init.sh
         command: /bin/bash /init.sh
-    
+        environment:
+            - TZ=UC
+        privileged: true
+        cap_add:
+            - NET_ADMIN
+            - NET_RAW
     atacante:
         image: debian:bullseye-slim
         container_name: atacante
