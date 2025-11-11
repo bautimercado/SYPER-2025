@@ -18,22 +18,29 @@ echo "PrintLastLog yes" >> /etc/ssh/sshd_config
 
 
 echo "Configuracion fail2ban"
+cat > /etc/fail2ban/filter.d/sshd-custom.conf << 'EOF'
+[Definition]
+failregex = ^.*Failed password for .* from <HOST> port \d+ ssh2$
+
+ignoreregex =
+EOF
 
 cat > /etc/fail2ban/jail.local << 'EOF'
 [DEFAULT]
 bantime = 3600
-findtime = 600
+findtime = 60
 maxretry = 2
 backend = auto
 
 [sshd]
 enabled = true
 port = ssh
-filter = sshd
+filter = sshd-custom
 logpath = /var/log/auth.log
 maxretry = 2
 bantime = 3600
-findtime = 600
+findtime = 60
+chain = FORWARD
 EOF
 
 mkdir -p /var/log
