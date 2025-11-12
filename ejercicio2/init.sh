@@ -25,22 +25,38 @@ failregex = ^.*Failed password for .* from <HOST> port \d+ ssh2$
 ignoreregex =
 EOF
 
+cat > /etc/fail2ban/action.d/iptables-block.conf << 'EOF'
+[Definition]
+# Simple iptables action for fail2ban: bans by inserting a DROP rule into the INPUT chain
+# Uses <ip> and <name> templates provided by fail2ban
+
+actionstart =
+actionstop =
+actioncheck =
+
+actionban = iptables -I INPUT -s <ip> -j DROP
+actionunban = iptables -D INPUT -s <ip> -j DROP
+EOF
+
 cat > /etc/fail2ban/jail.local << 'EOF'
 [DEFAULT]
 bantime = 3600
 findtime = 60
-maxretry = 2
+maxretry = 5
 backend = auto
+banaction = iptables-block
+action = iptables-block[name=%(__name__)s]
 
 [sshd]
 enabled = true
 port = ssh
 filter = sshd-custom
 logpath = /var/log/auth.log
-maxretry = 2
+maxretry = 5
 bantime = 3600
 findtime = 60
-chain = FORWARD
+chain = DOCKER-USER
+
 EOF
 
 mkdir -p /var/log
