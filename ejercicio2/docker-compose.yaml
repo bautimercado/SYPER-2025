@@ -1,0 +1,48 @@
+
+services:
+    ssh-server:
+        image: ubuntu:jammy
+        container_name: ssh-server
+        hostname: ssh-server
+        networks:
+            innet:
+                ipv4_address: 10.0.0.30
+        build: .
+        ports:
+            - "2222:22"
+        volumes:
+            - ./init.sh:/init.sh
+        command: /bin/bash /init.sh
+        environment:
+            - TZ=UC
+        privileged: true
+        cap_add:
+            - NET_ADMIN
+            - NET_RAW
+        sysctls:
+            - net.bridge.bridge-nf-call-iptables=1
+    atacante:
+        image: debian:bullseye-slim
+        container_name: atacante
+        hostname: atacante
+        networks:
+            innet:
+                ipv4_address: 10.0.0.31
+        
+        command: > 
+            bash -c "
+            apt-get update -qq &&
+            apt-get install -y -qq openssh-client iputils-ping &&
+            sleep infinity"
+        tty: true
+
+
+
+networks:
+    innet:
+        driver: bridge
+        ipam:
+            config:
+                - subnet: 10.0.0.0/24
+
+
