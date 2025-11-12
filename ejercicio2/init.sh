@@ -69,4 +69,22 @@ fail2ban-server -x &
 
 echo "iniciar server SSH"
 
+iptables -F
+iptables -X
+iptables -t nat -F
+iptables -t nat -X
+iptables -t mangle -F
+iptables -t mangle -X
+
+iptables -P INPUT DROP
+iptables -P FORWARD DROP
+iptables -P OUTPUT ACCEPT
+
+iptables -A INPUT -i lo -j ACCEPT
+
+iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+
+iptables -A INPUT -p tcp --dport 22 -m conntrack --ctstate NEW -j ACCEPT
+
+
 exec /usr/sbin/sshd -D -E /dev/stderr 2>&1 | ts '[%Y-%m-%d %H:%M:%S]' >> /var/log/auth.log
